@@ -1,5 +1,5 @@
 from flask import Flask, request, make_response, jsonify, send_file
-from gevent.wsgi import WSGIServer
+from gevent.pywsgi import WSGIServer
 import requests
 import traceback
 import pymysql
@@ -51,13 +51,13 @@ def post():
         place_id = cur.lastrowid
 
         # 5 MT 발행하기
-        api_hycon_transaction = "http://fabius.ciceron.xyz:2442/api/v1/signedTx"
+        api_hycon_transaction = "http://localhost:2442/api/v1/signedTx"
         payload = {
             "privateKey": HYCON['privateKey'],
             "from": HYCON['minerAddress'],
             "to": user_address,
             "amount": "0.000000005",
-            "fee": "0.000000005"
+            "fee": "0.000000001"
         }
         r = requests.post(api_hycon_transaction, json=payload)
 

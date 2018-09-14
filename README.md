@@ -2,6 +2,25 @@
 HYCON HACKS
 
 
+## HYCON configuration
+
+```
+$ cd bundle-linux
+$ vim data/config.json
+{
+    "os":"linux",
+    "dataGenesis":"./data/genesis.dat",
+    "dataRaw":"./data/raw",
+    "dataRoot":"./data",
+    "dataWallet":"./wallet",
+    "minerAddress":"H2Mcy6LBFmiEzp3C1bed9VV6UEDd6CNCg",
+    "txPoolMaxAddresses":36000,
+    "txPoolMaxTxsPerAddress":64
+}
+
+$ ./hycon --api --api_port=2442 --cpuMiners=1 --bootstrap --networkid=marofan --nonLocal --port=8148 $@
+```
+
 ## API
 
 ### /post
