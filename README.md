@@ -1,6 +1,7 @@
 # M-MChain-server
 HYCON HACKS
 
+
 ## API
 
 ### /post
@@ -20,7 +21,7 @@ POST
 
 #### response
 
-```json
+```
 {
     "latitude": "0.1234566",
     "longitude": "0.6543211",
@@ -31,6 +32,8 @@ POST
 }
 ```
 
+
+---
 
 
 ### /get
@@ -61,7 +64,7 @@ decimal  degrees    distance
 
 #### response
 
-```json
+```
 {
     "places": [
         {
@@ -77,6 +80,8 @@ decimal  degrees    distance
 }
 ```
 
+
+---
 
 
 ### /img/$place_id
