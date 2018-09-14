@@ -28,6 +28,7 @@ def hello_world():
 
 @app.route('/post', methods=['POST'])
 def post():
+    conn = connect_db()
     # 위치, 사진, 태그, 사용자
     user_address = request.values.get('user', None)  # 토큰받을 사용자의 address
     longitude = request.values.get('longitude', None)  # 경도
@@ -43,13 +44,6 @@ def post():
 
     # 입력받은 데이터 저장하기
     try:
-        conn = connect_db()
-        cur = conn.cursor()
-        query = """INSERT INTO places (longitude, latitude, img, img_name, img_mimetype, user_address, tags, memo) 
-                VALUES(%s, %s, %s, %s, %s, %s, %s, %s);"""
-        ret = cur.execute(query, (longitude, latitude, img.read(), img_name, img_mimetype, user_address, tags, memo, ))
-        place_id = cur.lastrowid
-
         # 5 MT 발행하기
         api_hycon_transaction = "http://localhost:2442/api/v1/signedTx"
         payload = {
@@ -60,7 +54,14 @@ def post():
             "fee": "0.000000001"
         }
         r = requests.post(api_hycon_transaction, json=payload)
+        rr = r.json()
+        transaction_hash = rr['txHash']
 
+        cur = conn.cursor()
+        query = """INSERT INTO places (longitude, latitude, img, img_name, img_mimetype, user_address, tags, memo, transaction_hash) 
+                VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s);"""
+        cur.execute(query, (longitude, latitude, img.read(), img_name, img_mimetype, user_address, tags, memo, transaction_hash, ))
+        place_id = cur.lastrowid
         conn.commit()
     except:
         traceback.print_exc()
@@ -80,10 +81,9 @@ def post():
         }
         return make_response(jsonify(error=error), 500)
     else:
-        rr = r.json()
         data = {
             "place_id": place_id,
-            "transaction_hash": rr['txHash'],
+            "transaction_hash": transaction_hash,
             "longitude": longitude,
             "latitude": latitude,
             "memo": memo,
