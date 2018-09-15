@@ -141,3 +141,25 @@ GET
     ]
 }
 ```
+
+
+---
+
+
+### /balance
+잔액 조회하기
+
+#### request
+POST
+
+**Body**
+
+- address: hycon wallet address
+
+#### response
+
+```
+{
+    "balance": "296639.999999954"
+}
+```

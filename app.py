@@ -140,6 +140,16 @@ def tags():
     return make_response(jsonify(tags=ret), 200)
 
 
+@app.route('/balance', methods=['POST'])
+def balance():
+    address = request.values.get('address', None)
+    api_hycon_wallet_balance = "http://fabius.ciceron.xyz:2442/api/v1/wallet/{}/balance".format(address)
+    print(api_hycon_wallet_balance)
+    r = requests.get(api_hycon_wallet_balance)
+    rr = r.json()
+    return make_response(jsonify(**rr), 200)
+
+
 if __name__ == '__main__':
     # app.run()
     http = WSGIServer(('0.0.0.0', 5000), app)
