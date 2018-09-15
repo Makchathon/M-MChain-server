@@ -47,7 +47,7 @@ def post():
     # 입력받은 데이터 저장하기
     try:
         # 5 MT 발행하기
-        api_hycon_transaction = "http://localhost:2442/api/v1/signedTx"
+        api_hycon_transaction = "http://fabius.ciceron.xyz:2442/api/v1/signedTx"
         payload = {
             "privateKey": HYCON['privateKey'],
             "from": HYCON['minerAddress'],
@@ -77,6 +77,7 @@ def post():
             cur.execute(query, (tag, ))
 
         conn.commit()
+        conn.close()
     except:
         traceback.print_exc()
         conn.rollback()
@@ -148,6 +149,63 @@ def balance():
     r = requests.get(api_hycon_wallet_balance)
     rr = r.json()
     return make_response(jsonify(**rr), 200)
+
+
+@app.route('/vote', methods=['POST'])
+def vote():
+    conn = connect_db()
+    cur = conn.cursor()
+
+    place_id = request.values.get('place_id', None)
+    from_user = request.values.get('from', None)
+    to_user = request.values.get('to', None)
+    vote_type = request.values.get('vote_type', None)
+    memo = request.values.get('memo', None)
+
+    try:
+        # reward
+        api_hycon_transaction = "http://fabius.ciceron.xyz:2442/api/v1/signedTx"
+        payload = {
+            "privateKey": HYCON['privateKey'],
+            "from": HYCON['minerAddress'],
+            "to": "",
+            "amount": "0.000000002",
+            "fee": "0.000000001"
+        }
+
+        if to_user:
+            payload['to'] = to_user
+            r = requests.post(api_hycon_transaction, json=payload)
+            rr = r.json()
+            to_txHash = rr['txHash']
+        else:
+            to_txHash = None
+
+        payload['to'] = from_user
+        r = requests.post(api_hycon_transaction, json=payload)
+        rr = r.json()
+        from_txHash = rr['txHash']
+
+        query = """INSERT INTO votes (place_id, vote_type, from_user, to_user, to_txHash, from_txHash, memo) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s);"""
+        cur.execute(query, (place_id, vote_type, from_user, to_user, to_txHash, from_txHash, memo, ))
+        vote_id = cur.lastrowid
+        conn.commit()
+        conn.close()
+
+        return make_response(jsonify(vote_id=vote_id, vote_type=vote_type, place_id=place_id,
+                                     from_user=from_user, from_txHash=from_txHash,
+                                     to_user=to_user, to_txHash=to_txHash,
+                                     memo=memo), 200)
+    except:
+        traceback.print_exc()
+        conn.rollback()
+        error = {
+            "code": 2222,
+            "type": "ServerError",
+            "message": "Server is temporary unavailable."
+        }
+        return make_response(jsonify(error=error), 500)
 
 
 if __name__ == '__main__':

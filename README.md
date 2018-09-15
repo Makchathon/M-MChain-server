@@ -163,3 +163,34 @@ POST
     "balance": "296639.999999954"
 }
 ```
+
+
+---
+
+
+### /vote
+장소에 투표하기
+
+#### request
+
+**Body**
+
+- place_id: 장소 번호
+- from: 투표하는 hycon wallet address
+- vote_type: 0: 조항요, 1: 싫어요
+- memo: 메모
+
+#### response
+
+```
+{
+    "from_txHash": "6GdzX5njAPQQ39NdMxgwWWu1PAzWzX6o4ZJcdrqd6H9x",
+    "from_user": "Hx6uqLefV1pK8CiLuFtHQGcdPaRq7mP9",
+    "vote_id": 2,
+    "memo": "사진 예쁘네요~",
+    "place_id": "24",
+    "to_txHash": null,
+    "to_user": null,
+    "vote_type": "0"
+}
+```
