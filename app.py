@@ -29,6 +29,8 @@ def hello_world():
 @app.route('/post', methods=['POST'])
 def post():
     conn = connect_db()
+    cur = conn.cursor()
+
     # 위치, 사진, 태그, 사용자
     user_address = request.values.get('user', None)  # 토큰받을 사용자의 address
     longitude = request.values.get('longitude', None)  # 경도
@@ -57,11 +59,23 @@ def post():
         rr = r.json()
         transaction_hash = rr['txHash']
 
-        cur = conn.cursor()
+        if r.status_code != 200:
+            error = {
+                "code": 1111,
+                "type": "HyconError",
+                "message": "Hycon server is temporary unavailable."
+            }
+            return make_response(jsonify(error=error), 500)
+
         query = """INSERT INTO places (longitude, latitude, img, img_name, img_mimetype, user_address, tags, memo, transaction_hash) 
                 VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s);"""
         cur.execute(query, (longitude, latitude, img.read(), img_name, img_mimetype, user_address, tags, memo, transaction_hash, ))
         place_id = cur.lastrowid
+
+        query = "INSERT INTO tags (tag) VALUES (%s);"
+        for tag in taglist:
+            cur.execute(query, (tag, ))
+
         conn.commit()
     except:
         traceback.print_exc()
@@ -72,24 +86,16 @@ def post():
             "message": "Server is temporary unavailable."
         }
         return make_response(jsonify(error=error), 500)
-    
-    if r.status_code != 200:
-        error = {
-            "code": 1111,
-            "type": "HyconError",
-            "message": "Hycon server is temporary unavailable."
-        }
-        return make_response(jsonify(error=error), 500)
-    else:
-        data = {
-            "place_id": place_id,
-            "transaction_hash": transaction_hash,
-            "longitude": longitude,
-            "latitude": latitude,
-            "memo": memo,
-            "tags": taglist
-        }
-        return make_response(jsonify(**data), 200)
+
+    data = {
+        "place_id": place_id,
+        "transaction_hash": transaction_hash,
+        "longitude": longitude,
+        "latitude": latitude,
+        "memo": memo,
+        "tags": taglist
+    }
+    return make_response(jsonify(**data), 200)
 
 
 @app.route('/get', methods=['GET'])
@@ -105,7 +111,7 @@ def get():
     # 현재 위치 기준 반경 범위안에 있는 곳 DB에서 꺼내기
     conn = connect_db()
     cur = conn.cursor()
-    query = """SELECT id, longitude, latitude, img_name, user_address, tags, memo, create_time FROM mmchain.places
+    query = """SELECT id, longitude, latitude, img_name, user_address, tags, memo, transaction_hash, create_time FROM mmchain.places
             WHERE (longitude BETWEEN %s AND %s) AND (latitude BETWEEN %s AND %s);"""
     cur.execute(query, (longitude-range, longitude+range, latitude-range, latitude+range))
     ret = cur.fetchall()
@@ -121,6 +127,17 @@ def img(place_id):
     ret = cur.fetchone()
 
     return send_file(BytesIO(ret['img']), attachment_filename=ret['img_name'])
+
+
+@app.route('/tags', methods=['GET'])
+def tags():
+    q = request.values.get('q', None)
+    conn = connect_db()
+    cur = conn.cursor()
+    query = "SELECT id, tag FROM tags WHERE tag LIKE %s;"
+    cur.execute(query, (q+'%', ))
+    ret = cur.fetchall()
+    return make_response(jsonify(tags=ret), 200)
 
 
 if __name__ == '__main__':

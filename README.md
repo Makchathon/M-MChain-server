@@ -114,3 +114,30 @@ GET
 #### response
 
 img
+
+
+---
+
+
+### /tags
+태그 자동완성을 위해 태그 검색한다
+
+#### request
+GET
+
+**Query String**
+
+- q: 검색할 태그
+
+#### response
+
+```
+{
+    "tags": [
+        {
+            "id": 10,  # 태그 번호
+            "tag": "입구"
+        }
+    ]
+}
+```
