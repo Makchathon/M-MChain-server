@@ -67,36 +67,35 @@ def post():
             }
             return make_response(jsonify(error=error), 500)
 
-        query = """INSERT INTO places (longitude, latitude, img, img_name, img_mimetype, user_address, tags, memo, transaction_hash) 
-                VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s);"""
-        cur.execute(query, (longitude, latitude, img.read(), img_name, img_mimetype, user_address, tags, memo, transaction_hash, ))
+        query = """INSERT INTO places (longitude, latitude, img, img_name, img_mimetype, user_address, tags, transaction_hash) VALUES(%s, %s, %s, %s, %s, %s, %s, %s);"""
+        cur.execute(query, args=(longitude, latitude, img.read(), img_name, img_mimetype, user_address, tags, transaction_hash, ))
         place_id = cur.lastrowid
 
         query = "INSERT INTO tags (tag) VALUES (%s);"
         for tag in taglist:
             cur.execute(query, (tag, ))
 
+        data = {
+            "place_id": place_id,
+            "transaction_hash": transaction_hash,
+            "longitude": longitude,
+            "latitude": latitude,
+            "memo": memo,
+            "tags": taglist
+        }
+        cur.close()
         conn.commit()
         conn.close()
+        return make_response(jsonify(**data), 200)
     except:
         traceback.print_exc()
-        conn.rollback()
+        # conn.rollback()
         error = {
             "code": 2222,
             "type": "ServerError",
             "message": "Server is temporary unavailable."
         }
         return make_response(jsonify(error=error), 500)
-
-    data = {
-        "place_id": place_id,
-        "transaction_hash": transaction_hash,
-        "longitude": longitude,
-        "latitude": latitude,
-        "memo": memo,
-        "tags": taglist
-    }
-    return make_response(jsonify(**data), 200)
 
 
 @app.route('/get', methods=['GET'])
@@ -114,8 +113,10 @@ def get():
     cur = conn.cursor()
     query = """SELECT id, longitude, latitude, img_name, user_address, tags, memo, transaction_hash, create_time FROM mmchain.places
             WHERE (longitude BETWEEN %s AND %s) AND (latitude BETWEEN %s AND %s);"""
-    cur.execute(query, (longitude-range, longitude+range, latitude-range, latitude+range))
+    cur.execute(query, (longitude-range, longitude+range, latitude-range, latitude+range, ))
     ret = cur.fetchall()
+    cur.close()
+    conn.close()
     return make_response(jsonify(places=ret), 200)
 
 
@@ -126,7 +127,8 @@ def img(place_id):
     query = "SELECT img, img_name, img_mimetype FROM mmchain.places WHERE id = %s;"
     cur.execute(query, (place_id, ))
     ret = cur.fetchone()
-
+    cur.close()
+    conn.close()
     return send_file(BytesIO(ret['img']), attachment_filename=ret['img_name'])
 
 
@@ -138,6 +140,8 @@ def tags():
     query = "SELECT id, tag FROM tags WHERE tag LIKE %s;"
     cur.execute(query, (q+'%', ))
     ret = cur.fetchall()
+    cur.close()
+    conn.close()
     return make_response(jsonify(tags=ret), 200)
 
 
@@ -145,7 +149,6 @@ def tags():
 def balance():
     address = request.values.get('address', None)
     api_hycon_wallet_balance = "http://fabius.ciceron.xyz:2442/api/v1/wallet/{}/balance".format(address)
-    print(api_hycon_wallet_balance)
     r = requests.get(api_hycon_wallet_balance)
     rr = r.json()
     return make_response(jsonify(**rr), 200)
@@ -190,6 +193,8 @@ def vote():
                 VALUES (%s, %s, %s, %s, %s, %s, %s);"""
         cur.execute(query, (place_id, vote_type, from_user, to_user, to_txHash, from_txHash, memo, ))
         vote_id = cur.lastrowid
+
+        cur.close()
         conn.commit()
         conn.close()
 
@@ -210,5 +215,10 @@ def vote():
 
 if __name__ == '__main__':
     # app.run()
-    http = WSGIServer(('0.0.0.0', 5000), app)
-    http.serve_forever()
+    # http = WSGIServer(('0.0.0.0', 5000), app)
+    # http.serve_forever()
+
+    cert = './cert_key/pfx.mycattool_com.crt'
+    key = './cert_key/pfx.mycattool_com.key'
+    https = WSGIServer(('0.0.0.0', 5000), app, keyfile=key, certfile=cert)
+    https.serve_forever()
